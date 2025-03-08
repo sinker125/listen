@@ -3,26 +3,25 @@ name: Podcast Update Monitor
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天UTC时间0点执行 <button class="citation-flag" data-index="4"><button class="citation-flag" data-index="7">
-  workflow_dispatch:      # 支持手动触发 <button class="citation-flag" data-index="5">
+    - cron: '0 22 * * *'  # 北京时间每天6点（UTC+8）<button class="citation-flag" data-index="4"><button class="citation-flag" data-index="7">
+  workflow_dispatch:      # 手动触发开关<button class="citation-flag" data-index="5"><button class="citation-flag" data-index="7">
 
 jobs:
   check-updates:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4  # 确保获取最新代码 <button class="citation-flag" data-index="7">
+      uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'  # 指定Python版本 <button class="citation-flag" data-index="8">
+        python-version: '3.11'
 
     - name: Install dependencies
       run: |
         pip install --upgrade pip
         pip install requests==2.31.0 beautifulsoup4==4.12.3 fake-useragent==1.1.3
-      # 固定依赖版本保证稳定性 <button class="citation-flag" data-index="3">
 
     - name: Execute monitoring script
       env:
@@ -37,13 +36,11 @@ from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
 import requests
 
-# 配置文件路径 <button class="citation-flag" data-index="2">
 MONITOR_FILE = 'monitor_list.txt'
 OUTPUT_FILE = 'podcast_updates.txt'
 BLACKLIST_FILE = 'blacklist.txt'
 
 def read_config(file_path):
-    """统一配置读取函数，添加异常处理 <button class="citation-flag" data-index="9">"""
     try:
         with open(file_path, 'r') as f:
             return [line.strip() for line in f if line.strip()]
@@ -51,7 +48,6 @@ def read_config(file_path):
         return []
 
 def get_session():
-    """强化反爬策略 <button class="citation-flag" data-index="7"><button class="citation-flag" data-index="8">"""
     ua = UserAgent()
     session = requests.Session()
     session.headers.update({
@@ -62,16 +58,15 @@ def get_session():
     return session
 
 def parse_audio_info(url):
-    """解析音频信息，添加重试机制 <button class="citation-flag" data-index="3">"""
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            time.sleep(random.uniform(1, 3))  # 随机延迟防检测
+            time.sleep(random.uniform(1, 3))
             response = get_session().get(url, timeout=10)
             response.encoding = 'utf-8'
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # 实际解析需要根据DOM结构调整选择器
+            # 需根据实际页面结构调整选择器
             title = soup.select_one('.title').text.strip()
             audio_url = soup.select_one('audio')['src']
             return f"{title}&&{audio_url}"
@@ -81,7 +76,6 @@ def parse_audio_info(url):
                 return None
 
 def main():
-    # 读取配置文件 <button class="citation-flag" data-index="2">
     monitors = read_config(MONITOR_FILE)
     blacklist = read_config(BLACKLIST_FILE)
     existing = read_config(OUTPUT_FILE)
@@ -91,7 +85,6 @@ def main():
         print(f"Checking: {url}")
         result = parse_audio_info(url)
         if result:
-            # 双重验证：非重复且非黑名单 <button class="citation-flag" data-index="9">
             if result not in existing and not any(keyword in result for keyword in blacklist):
                 new_updates.append(result)
     
@@ -99,17 +92,15 @@ def main():
         with open(OUTPUT_FILE, 'a') as f:
             f.write('\n' + '\n'.join(new_updates) + '\n')
         
-        # 自动提交变更 <button class="citation-flag" data-index="7">
         os.system('git config --global user.name "github-actions"')
         os.system('git config --global user.email "actions@github.com"')
-        os.system(f'git commit -am "Add {len(new_updates)} new podcast entries"')
+        os.system(f'git commit -am "Add {len(new_updates)} new entries"')
         os.system(f'git push https://{os.environ["GITHUB_ACTOR"]}:{os.environ["GITHUB_TOKEN"]}@github.com/{os.environ["GITHUB_REPOSITORY"]}.git HEAD:main')
 
 if __name__ == '__main__':
     main()
 EOF
 
-    # 错误处理步骤 <button class="citation-flag" data-index="8">
     - name: Check for failures
       if: ${{ failure() }}
       run: |
